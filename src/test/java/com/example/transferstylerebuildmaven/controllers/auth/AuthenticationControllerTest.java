@@ -4,7 +4,6 @@ import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.repositories.UserRepository;
 import com.example.transferstylerebuildmaven.requests.AuthenticationRequest;
 import com.example.transferstylerebuildmaven.requests.RegisterRequest;
-import com.example.transferstylerebuildmaven.respones.AuthenticationResponse;
 import com.example.transferstylerebuildmaven.services.AuthenticationService;
 import com.example.transferstylerebuildmaven.services.JwtService;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -12,35 +11,25 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-
 
 import java.io.IOException;
 
 import static com.example.transferstylerebuildmaven.models.user.Role.ADMIN;
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 public class AuthenticationControllerTest {
 
-    @Autowired
-    private AuthenticationService authenticationService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -129,14 +118,8 @@ public class AuthenticationControllerTest {
     @Test
     public void testRefreshToken_Success() throws IOException {
 
-
-
     }
-    private AuthenticationResponse saveUserToDatabaseAndGetResponse(){
 
-
-        return null;
-    }
 
     private static String asJsonString(Object obj) {
         try {

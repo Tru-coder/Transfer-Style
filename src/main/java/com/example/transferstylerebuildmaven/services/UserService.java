@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.webjars.NotFoundException;
 
 import java.security.Principal;
 
@@ -16,6 +17,10 @@ import java.security.Principal;
 public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository repository;
+
+    public User getUser(String username){
+        return repository.findByUsername(username).orElseThrow(() -> new NotFoundException("User with name " + username + " not found"));
+    }
 
     public void changePassword(ChangePasswordRequest request, Principal connectedUser) {
 

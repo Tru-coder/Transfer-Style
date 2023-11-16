@@ -1,4 +1,4 @@
-package com.example.transferstylerebuildmaven.models;
+package com.example.transferstylerebuildmaven.models.style_transfer;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -40,7 +40,8 @@ public class StyleTransfer {
     private LocalDateTime executionTime;
 
     @Column(nullable = false, name = "algorithm_style_transfer_type")
-    private String algorithmStyleTransferType;
+    @Enumerated(EnumType.STRING)
+    private StyleTransferType algorithmStyleTransferType;
 
     @Column(nullable = false, name = "style_image_absolute_path")
     private String styleImageAbsolutePath;

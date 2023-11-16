@@ -31,6 +31,9 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final TokenRepository tokenRepository;
+    private final EmailSerivce emailSerivce;
+
+    private final boolean shouldSendEmail = true;
 
     public AuthenticationResponse register(RegisterRequest request) {
         User user = User.builder()
@@ -46,6 +49,11 @@ public class AuthenticationService {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
         saveUserToken(savedUser, accessToken);
+
+        if (shouldSendEmail){
+            new Thread(() -> emailSerivce.sendTextEmail(user.getEmail(), "Successful Registration", "We are happy to see you on our portal")).start();
+        }
+
 
         return AuthenticationResponse.builder()
                 .accessToken(accessToken)

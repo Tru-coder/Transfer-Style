@@ -338,8 +338,8 @@ def get_input_optimizer(input_img):
 #
 
 def run_style_transfer(cnn, normalization_mean, normalization_std,
-                       content_img, style_img, input_img, output_path, num_steps=300,
-                       style_weight=1e6, content_weight=1, log_step=10, sample_step=100):
+                       content_img, style_img, input_img, output_path, num_steps=500,
+                       style_weight=1e6, content_weight=1, log_step=10, sample_step=10):
     """Run the style transfer."""
     print('Building the style transfer model..')
     model, style_losses, content_losses = get_style_model_and_losses(cnn,

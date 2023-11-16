@@ -1,6 +1,8 @@
 package com.example.transferstylerebuildmaven.services;
 
-import com.example.transferstylerebuildmaven.models.StyleTransfer;
+import com.example.transferstylerebuildmaven.models.style_transfer.StyleTransfer;
+import com.example.transferstylerebuildmaven.models.style_transfer.StyleTransferType;
+import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.repositories.StyleTransferRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -16,17 +18,27 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.time.LocalDateTime;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+
+/**
+ * Service class for conducting style transfer operations.
+ */
 
 @Service
 @Getter
 @RequiredArgsConstructor
 public class StyleTransferService {
+    // Dependencies
+    private final UserService userService;
+    private final EmailSerivce emailSerivce;
     private final StyleTransferRepository styleTransferRepository;
     private final ResourceLoader resourceLoader;
 
+
+    // Properties
     @Value("${upload.image.path}")// path from properties for file
     private String uploadImagePath;
 
@@ -39,6 +51,16 @@ public class StyleTransferService {
     @Value("${python.script.style.transfer.venv.path}")
     private String pythonVenvStyleTransferPath;
 
+
+    /**
+     * Method to create a unique file name and transfer the file.
+     *
+     * @param original     The original file to be transferred
+     * @param description  The description of the file
+     * @param requestUUID  The UUID of the request
+     * @return             The path of the transferred file
+     * @throws IOException If an I/O error occurs
+     */
     private String makeUniqueFileNameAndTransfer(MultipartFile original, String description, String requestUUID) throws IOException {
         if (original != null && !Objects.requireNonNull(original.getOriginalFilename()).isEmpty()){
             String uploadDirectory = uploadImagePath + "\\" + requestUUID;
@@ -95,6 +117,15 @@ public class StyleTransferService {
 
     }
 
+    /**
+     * Method to conduct style transfer using Gatys algorithm.
+     *
+     * @param uuidRequest     The UUID of the request
+     * @param originalImage   The original image file
+     * @param styleImage      The style image file
+     * @param optimizer       The optimizer for style transfer
+     * @return                True if style transfer is successful, false otherwise
+     */
     public boolean doStyleTransferGatys(UUID uuidRequest, MultipartFile originalImage, MultipartFile styleImage, String optimizer) {
         String  uniqueOriginalImage, uniqueStyleImage;
         StyleTransfer createdStyleTransfer = new StyleTransfer();
@@ -117,7 +148,7 @@ public class StyleTransferService {
         new Thread(() -> {
             createdStyleTransfer.setOptimizer(optimizer);
             createdStyleTransfer.setFinishedAt(LocalDateTime.now());
-            createdStyleTransfer.setAlgorithmStyleTransferType("Gatys");
+            createdStyleTransfer.setAlgorithmStyleTransferType(StyleTransferType.GATYS);
 
             String pathToOutputImage = outputImagePath + "\\" +  uuidRequest + "\\" + optimizer +"-result.jpg";
             String pathToOriginalImage =  uniqueOriginalImage;
@@ -156,9 +187,57 @@ public class StyleTransferService {
         // not exist
         return false;
     }
+
     @Transactional
     public StyleTransfer getStyleTransferByUuidRequest(UUID uuidRequest){
         return styleTransferRepository.findByUuidRequest(uuidRequest).orElse(null);
     }
 
+    public ByteArrayOutputStream getResultFilesInByteArrayStream(UUID uuidRequest) throws IOException {
+        List<File> files = getFilesInDirectory(uuidRequest);
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream);
+
+        zipFiles(files, zipOutputStream);
+
+        return outputStream;
+    }
+
+    public void sendResultInEmail(UUID uuidRequest, String name) throws IOException {
+        User user = userService.getUser(name);
+        emailSerivce.sendEmailWithAttachment(user.getEmail(), "Style Transfer Result", "Your Result", createZipResultFiles(uuidRequest));
+    }
+
+    public File createZipResultFiles(UUID uuidRequest) throws IOException {
+        List<File> files = getFilesInDirectory(uuidRequest);
+        File tempFile = File.createTempFile("resultFiles", ".zip");
+
+        try (FileOutputStream fileOutputStream = new FileOutputStream(tempFile);
+             ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream)) {
+            zipFiles(files, zipOutputStream);
+        }
+
+        return tempFile;
+    }
+
+    private List<File> getFilesInDirectory(UUID uuidRequest) {
+        File directory = new File(getOutputImagePath() + File.separator + uuidRequest);
+        return new ArrayList<>(Arrays.asList(Objects.requireNonNull(directory.listFiles())));
+    }
+
+    private void zipFiles(List<File> files, ZipOutputStream zipOutputStream) throws IOException {
+        Set<String> fileNameAdded = new HashSet<>();
+
+        for (File file : files) {
+            if (!fileNameAdded.contains(file.getName())) {
+                zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+                try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                    IOUtils.copy(fileInputStream, zipOutputStream);
+                }
+                zipOutputStream.closeEntry();
+                fileNameAdded.add(file.getName());
+            }
+        }
+    }
 }
