@@ -1,0 +1,62 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/demoNirProject
+    username: postgres
+    password: root
+    servlet:
+      multipart:
+        max-file-size: 100MB
+        max-request-size: 100MB
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: neuroseteus@gmail.com
+    password: svyb tkpn jtji ibio
+    properties:
+      mail:
+        stmp:
+          auth:true
+        starttls:
+          enable: true
+  jpa:
+    generate-ddl: true
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        format_sql: true
+      show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    open-in-view: true
+server:
+  tomcat:
+    max-http-form-post-size: 100MB
+    threads:
+      max: 200
+    max-swallow-size: 200MB
+upload:
+  image:
+    path: B:\\Projects-backend-Java\\TransferStyleRebuildMaven\\src\\main\\resources\\styleTransferGatysInput
+output:
+  image:
+    path: B:\\Projects-backend-Java\\TransferStyleRebuildMaven\\src\\main\\resources\\styleTransferGatysOutput
+python:
+  script:
+    style:
+      transfer:
+        gatys:
+          path: B:\\Projects-backend-Java\\TransferStyleRebuildMaven\\src\\main\\java\\com\\example\\transferstylerebuildmaven\\python-scripts\\main.py
+        venv:
+          path: C:\\Users\\user\\anaconda3\\envs\\my-tf-transfer\\python.exe
+application:
+  security:
+    jwt:
+      secret-key: 3aXK322ik12ZbyN1qyGOunW0I6uLt8hht3FFPRVvDAXMD5tbTMBlk14OrLPWABADyAH9FM8PINISPAmCcpYyBOM98/UtXdelKxwEqP6KWSkqfsF7jTApFwx2JWx35sBYzyVW+lUhR6e7us/dF8AtjSm2fdwYbCMZ2RfqQOKCkEfxuADT35qT0NcK24TRe3V2nVuRq/ZdqzRSHNVAAfD06OqxRjv/ZrtqgFEPJwkXbzztB27VcQiqJPoHT2z2D88xzxa3Oeg8+uNQdOp8c1reE87AA7JHkAXG3k6Tm8lYO0TUJQLd5BcFZGR7S7xvqU7yGA88deia9AYv28DNd103eTEyWXa/qpjNee1/TExb0XU=
+      expiration: 600000
+      refresh-token:
+        expiration: 604800000
+
+

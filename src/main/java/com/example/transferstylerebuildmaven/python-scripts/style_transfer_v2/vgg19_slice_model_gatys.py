@@ -45,7 +45,7 @@ class VGGNet(nn.Module):
 
 def style_transfer_gatys_one_style_adam(
         content_img_path, style_img_path_1, output_path, device,
-        max_size, style_weight=2, learning_rate=0.03, total_step=5000, log_step=10, sample_step=500
+        max_size, style_weight=2, learning_rate=0.03, total_step=2500, log_step=10, sample_step=500
 ):
     # Image preprocessing VGGNet was trained on ImageNet where images are normalized by mean=[0.485, 0.456,
     # 0.406] and std=[0.229, 0.224, 0.225]. use the same normalization statistics here.
