@@ -193,15 +193,8 @@ public class StyleTransferService {
         return styleTransferRepository.findByUuidRequest(uuidRequest).orElse(null);
     }
 
-    public ByteArrayOutputStream getResultFilesInByteArrayStream(UUID uuidRequest) throws IOException {
-        List<File> files = getFilesInDirectory(uuidRequest);
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream);
-
-        zipFiles(files, zipOutputStream);
-
-        return outputStream;
+    public File getResultFilesInByteArrayStream(UUID uuidRequest) throws IOException {
+        return createZipResultFiles(uuidRequest);
     }
 
     public void sendResultInEmail(UUID uuidRequest, String name) throws IOException {
