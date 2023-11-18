@@ -4,10 +4,13 @@ package com.example.transferstylerebuildmaven.controllers.style_transfer;
 import com.example.transferstylerebuildmaven.commons.RequestState;
 import com.example.transferstylerebuildmaven.commons.StyleTransferProcessingState;
 import com.example.transferstylerebuildmaven.respones.style_transfers.RequestStyleTransferResponse;
+import com.example.transferstylerebuildmaven.services.FileSystemStorageService;
 import com.example.transferstylerebuildmaven.services.StyleTransferService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.IOUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,6 +19,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.Principal;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -25,7 +30,9 @@ import java.util.zip.ZipOutputStream;
 @RestController
 @RequestMapping("/api")
 public class StyleTransferController implements StyleTransferInterface {
+    // todo: seperate StyleTransferController in StyleTransferController and FileController
     private final StyleTransferService styleTransferService;
+    private final FileSystemStorageService fileSystemStorageService;
 
     private final HashMap<UUID, StyleTransferProcessingState> requestsState
             = new HashMap<UUID, StyleTransferProcessingState>();
@@ -84,35 +91,27 @@ public class StyleTransferController implements StyleTransferInterface {
 
     @Override
     public ResponseEntity<?> downloadAllResultFilesFromDisk(@PathVariable("uuidRequest") UUID uuidRequest) throws IOException {
-        File f = new File(styleTransferService.getOutputImagePath() + "\\"+uuidRequest);
-        List<File> files = new ArrayList<File>(Arrays.asList(Objects.requireNonNull(f.listFiles())));
 
-        // Create an output stream
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        File zip = fileSystemStorageService.createZipResultFiles(uuidRequest);
 
-        // Create a ZipOutputStream and pass the output stream to it
-        ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream);
+        Path zipPath = zip.toPath();
+        byte[] zipContent = Files.readAllBytes(zipPath);
 
-        // Package files
-        Set<String> fileNameAdded = new HashSet<>();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/zip"));
+        headers.setContentDispositionFormData("attachment", "Result_files.zip");
+        headers.setContentLength(zipContent.length);
 
-        for (File file : files) {
-            // New zip entry and copying input stream with file, after that close stream
-            if (!fileNameAdded.contains(file.getName())) {
-                zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
-                FileInputStream fileInputStream = new FileInputStream(file);
-                IOUtils.copy(fileInputStream, zipOutputStream);
+        return new ResponseEntity<>(zipContent, headers, HttpStatus.OK);
 
-                fileInputStream.close();
-                zipOutputStream.closeEntry();
-                fileNameAdded.add(file.getName());
-            }
-        }
-        zipOutputStream.close();
 
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename= Result_files.zip")
-                .body(outputStream.toByteArray());
+//        return ResponseEntity.ok()
+//                .header("Content-Disposition", "attachment; filename= Result_files.zip")
+//                .body(outputStream.toByteArray());
+//        return null;
+
+//           // Create an output stream
+//        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     }
 
 

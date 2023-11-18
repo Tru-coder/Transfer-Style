@@ -6,11 +6,7 @@ import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.repositories.StyleTransferRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.IOUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,86 +32,12 @@ public class StyleTransferService {
     private final EmailSerivce emailSerivce;
     private final StyleTransferRepository styleTransferRepository;
     private final ResourceLoader resourceLoader;
+    private final PythonService pythonService;
+    private final FileSystemStorageService fileService;
 
 
-    // Properties
-    @Value("${upload.image.path}")// path from properties for file
-    private String uploadImagePath;
-
-    @Value("${output.image.path}") // path from properties for file
-    private String outputImagePath;
-
-    @Value("${python.script.style.transfer.gatys.path}")
-    private String pythonScriptStyleTransferGatysPath;
-
-    @Value("${python.script.style.transfer.venv.path}")
-    private String pythonVenvStyleTransferPath;
 
 
-    /**
-     * Method to create a unique file name and transfer the file.
-     *
-     * @param original     The original file to be transferred
-     * @param description  The description of the file
-     * @param requestUUID  The UUID of the request
-     * @return             The path of the transferred file
-     * @throws IOException If an I/O error occurs
-     */
-    private String makeUniqueFileNameAndTransfer(MultipartFile original, String description, String requestUUID) throws IOException {
-        if (original != null && !Objects.requireNonNull(original.getOriginalFilename()).isEmpty()){
-            String uploadDirectory = uploadImagePath + "\\" + requestUUID;
-            File uploadDir = new File(uploadDirectory);
-
-            if (!uploadDir.exists()) {
-                uploadDir.mkdir();
-            }
-            String resultFilename = description + "_" + original.getOriginalFilename();
-            original.transferTo(new File(uploadDir + "/" + resultFilename));
-
-            return uploadDirectory + "\\" + resultFilename;
-        }
-        throw new RuntimeException("File " + original.getOriginalFilename() + "is empty or malicious");
-    }
-
-
-    private int executePythonScript(UUID uuidRequest, String uniqueOriginalImage, String uniqueStyleImage, String optimizer){
-        String parametersString =
-                "--content_img_name " + uniqueOriginalImage + " "
-                        + "--style_img_name " + uniqueStyleImage + " "
-                        + "--optimizer " + optimizer + " "
-                        + "--location_input_folder " + " " + uploadImagePath + "\\" + uuidRequest + " "
-                        + "--location_output_folder" + " " + outputImagePath + "\\" +  uuidRequest;
-
-        String executionLine = pythonVenvStyleTransferPath + " "  + pythonScriptStyleTransferGatysPath +
-                " " + parametersString;
-
-        CommandLine cmdLine = CommandLine.parse(executionLine);
-
-        System.out.println(parametersString);
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PumpStreamHandler streamHandler = new PumpStreamHandler(outputStream);
-
-        DefaultExecutor executor = new DefaultExecutor();
-        executor.setStreamHandler(streamHandler);
-        int exitCode = 0;
-        try {
-            exitCode = executor.execute(cmdLine);
-        } catch (IOException e) {
-            String output = outputStream.toString();
-            System.out.println(output);
-            e.printStackTrace();
-            throw new RuntimeException("Style transfer cannot be perform due to python error", e);
-        }
-
-        String output = outputStream.toString();
-
-        System.out.println(output);
-        System.out.println(exitCode);
-
-        return exitCode;
-
-    }
 
     /**
      * Method to conduct style transfer using Gatys algorithm.
@@ -127,22 +49,29 @@ public class StyleTransferService {
      * @return                True if style transfer is successful, false otherwise
      */
     public boolean doStyleTransferGatys(UUID uuidRequest, MultipartFile originalImage, MultipartFile styleImage, String optimizer) {
-        String  uniqueOriginalImage, uniqueStyleImage;
         StyleTransfer createdStyleTransfer = new StyleTransfer();
         createdStyleTransfer.setUuidRequest(uuidRequest);
         createdStyleTransfer.setCreatedAt(LocalDateTime.now());
 
         // make unique names
+        String  pathToOriginalImage, pathToStyleImage;
         try {
-            uniqueOriginalImage = makeUniqueFileNameAndTransfer(originalImage, "original", uuidRequest.toString());
-            uniqueStyleImage = makeUniqueFileNameAndTransfer(styleImage, "style", uuidRequest.toString());
+            pathToOriginalImage = fileService.makeUniqueFileNameAndTransfer(originalImage, "original", uuidRequest.toString());
+            pathToStyleImage = fileService.makeUniqueFileNameAndTransfer(styleImage, "style", uuidRequest.toString());
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("Files are empty or malicious");
         }
 
+        createdStyleTransfer.setOriginalImageAbsolutePath(pathToOriginalImage);
+        createdStyleTransfer.setStyleImageAbsolutePath(pathToStyleImage);
+        createdStyleTransfer.setOptimizer(optimizer);
+
         // do style transfer
-       if ( executePythonScript(uuidRequest, uniqueOriginalImage, uniqueStyleImage, optimizer) != 0) throw new RuntimeException("Python script execution error");
+       if (pythonService.executePythonScript(createdStyleTransfer, fileService.getOutputImagePath()) != 0)
+       {
+           throw new RuntimeException("Python script execution error");
+       }
 
        // save to database
         new Thread(() -> {
@@ -150,14 +79,8 @@ public class StyleTransferService {
             createdStyleTransfer.setFinishedAt(LocalDateTime.now());
             createdStyleTransfer.setAlgorithmStyleTransferType(StyleTransferType.GATYS);
 
-            String pathToOutputImage = outputImagePath + "\\" +  uuidRequest + "\\" + optimizer +"-result.jpg";
-            String pathToOriginalImage =  uniqueOriginalImage;
-            String pathToStyleImage = uniqueStyleImage;
-
+            String pathToOutputImage = fileService.getOutputImagePath() + File.separator +  uuidRequest + File.separator + optimizer +"-result.jpg";
             createdStyleTransfer.setCreatedImageAbsolutePath(pathToOutputImage);
-            createdStyleTransfer.setOriginalImageAbsolutePath(pathToOriginalImage);
-            createdStyleTransfer.setStyleImageAbsolutePath(pathToStyleImage);
-
             try {
                 createdStyleTransfer.setCreatedImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToOutputImage).getFile())));
                 createdStyleTransfer.setStyleImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToStyleImage).getFile())));
@@ -194,43 +117,15 @@ public class StyleTransferService {
     }
 
     public File getResultFilesInByteArrayStream(UUID uuidRequest) throws IOException {
-        return createZipResultFiles(uuidRequest);
+        return fileService.createZipResultFiles(uuidRequest);
     }
 
     public void sendResultInEmail(UUID uuidRequest, String name) throws IOException {
         User user = userService.getUser(name);
-        emailSerivce.sendEmailWithAttachment(user.getEmail(), "Style Transfer Result", "Your Result", createZipResultFiles(uuidRequest));
+        emailSerivce.sendEmailWithAttachment(user.getEmail(), "Style Transfer Result", "Your Result", fileService.createZipResultFiles(uuidRequest));
     }
 
-    public File createZipResultFiles(UUID uuidRequest) throws IOException {
-        List<File> files = getFilesInDirectory(uuidRequest);
-        File tempFile = File.createTempFile("resultFiles", ".zip");
 
-        try (FileOutputStream fileOutputStream = new FileOutputStream(tempFile);
-             ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream)) {
-            zipFiles(files, zipOutputStream);
-        }
 
-        return tempFile;
-    }
 
-    private List<File> getFilesInDirectory(UUID uuidRequest) {
-        File directory = new File(getOutputImagePath() + File.separator + uuidRequest);
-        return new ArrayList<>(Arrays.asList(Objects.requireNonNull(directory.listFiles())));
-    }
-
-    private void zipFiles(List<File> files, ZipOutputStream zipOutputStream) throws IOException {
-        Set<String> fileNameAdded = new HashSet<>();
-
-        for (File file : files) {
-            if (!fileNameAdded.contains(file.getName())) {
-                zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
-                try (FileInputStream fileInputStream = new FileInputStream(file)) {
-                    IOUtils.copy(fileInputStream, zipOutputStream);
-                }
-                zipOutputStream.closeEntry();
-                fileNameAdded.add(file.getName());
-            }
-        }
-    }
 }

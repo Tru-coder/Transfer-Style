@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--location_input_folder", type=str,
-                        default='C:\\Users\\user\\IdeaProjects\\TransferStyle\\src\\main\\resources\\styleTransferGatysInput\\test')
+                        default='') # not needed
     parser.add_argument("--location_output_folder", type=str,
                         default='C:\\Users\\user\\IdeaProjects\\TransferStyle\\src\\main\\resources\\styleTransferGatysOutput\\test')
 
