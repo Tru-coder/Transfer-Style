@@ -8,9 +8,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.IOUtils;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +16,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -108,6 +106,7 @@ public class StyleTransferService {
         styleTransferRepository.deleteByUuidRequest(uuidRequest);
         return true;
     }
+
     @Transactional
     public boolean softDeleteStyleTransfer(UUID uuidRequest){
         StyleTransfer styleTransfer = getStyleTransferByUuidRequest(uuidRequest);
@@ -123,6 +122,12 @@ public class StyleTransferService {
     @Transactional
     public StyleTransfer getStyleTransferByUuidRequest(UUID uuidRequest){
         return styleTransferRepository.findByUuidRequest(uuidRequest).orElse(null);
+    }
+
+    @Transactional
+    public List<StyleTransfer> getAllUserStyleTransfers (User user){
+        if (user == null) throw new NullPointerException("User cannot be null");
+        return styleTransferRepository.findAllByUserAndIsDeletedIsFalse(user);
     }
 
 

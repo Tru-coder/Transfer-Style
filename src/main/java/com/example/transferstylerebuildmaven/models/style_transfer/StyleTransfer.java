@@ -17,7 +17,6 @@ import java.util.UUID;
 @Table(name="style_transfer")
 @Getter
 @Setter
-@ToString
 public class StyleTransfer {
 
     @Id
@@ -72,6 +71,17 @@ public class StyleTransfer {
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JsonIgnore
     private User user;
+
+    @Override
+    public String toString(){
+        return "StyleTransfer{" +
+                "uuid='" + uuidRequest + '\'' +
+                ", optimizer='" + optimizer + '\'' +
+                ", execution Time='" + executionTime + '\'' +
+                ", isDeleted='" + isDeleted + '\'' +
+                '}';
+    }
+
 
     @PrePersist
     public void initialize() {

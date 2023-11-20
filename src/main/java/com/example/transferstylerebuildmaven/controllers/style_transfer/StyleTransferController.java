@@ -30,12 +30,19 @@ public class StyleTransferController implements StyleTransferInterface {
             = new HashMap<>();
 
 
+    // todo: seperate on URL lock level methods
+    // todo: add File Entity, Scroll Entity (Lenta)
+
     @RequestMapping(value = "auth/result/style/transfer/{uuidRequest}", method = RequestMethod.GET)
     public ResponseEntity<?> sendResultStyleTransferInEmail (@PathVariable("uuidRequest") UUID uuidRequest) throws IOException {
         styleTransferService.sendResultInEmail(uuidRequest, Objects.requireNonNull(getCurrentUser()).getEmail());
         return ResponseEntity.ok().body("Sent");
     }
 
+    @RequestMapping(value = "auth/results/style/transfer", method = RequestMethod.GET)
+    public ResponseEntity<?> getAllUserStyleTransfers ()  {
+        return ResponseEntity.ok().body(styleTransferService.getAllUserStyleTransfers(getCurrentUser()));
+    }
 
     @Override
     public ResponseEntity<?> styleTransferGatys(
@@ -85,7 +92,7 @@ public class StyleTransferController implements StyleTransferInterface {
     public ResponseEntity<?> getStyleTransfer(@PathVariable("uuidRequest") UUID uuidRequest){
 
 
-        return ResponseEntity.status(HttpStatus.OK).body( styleTransferService.getStyleTransferByUuidRequest(uuidRequest));
+        return ResponseEntity.status(HttpStatus.OK).body( styleTransferService.getStyleTransferByUuidRequest(uuidRequest).toString());
     }
 
 
