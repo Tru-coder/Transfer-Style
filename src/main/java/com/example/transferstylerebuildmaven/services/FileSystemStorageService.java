@@ -38,20 +38,35 @@ public class FileSystemStorageService {
      * @throws IOException If an I/O error occurs
      */
     public String makeUniqueFileNameAndTransfer(MultipartFile original, String description, String requestUUID) throws IOException {
-        if (original != null && !Objects.requireNonNull(original.getOriginalFilename()).isEmpty()){
-            String uploadDirectory = uploadImagePath + File.separator + requestUUID;
-            File uploadDir = new File(uploadDirectory);
-
-            if (!uploadDir.exists()) {
-                uploadDir.mkdir();
-            }
-            String resultFilename = description + "_" + original.getOriginalFilename();
-            original.transferTo(new File(uploadDir + "/" + resultFilename));
-
-            return uploadDirectory + File.separator + resultFilename;
+        if (original == null || original.isEmpty()) {
+            // Throw an exception if the original file is empty or malicious
+            throw new IllegalArgumentException("File is empty or malicious: " + original.getOriginalFilename());
         }
-        throw new RuntimeException("File " + original.getOriginalFilename() + "is empty or malicious");
+        String uploadDirectory = uploadImagePath + File.separator + requestUUID;
+        File uploadDir = new File(uploadDirectory);
+
+        // Create upload directory if it does not exist
+        if (!uploadDir.exists()) {
+            if (!uploadDir.mkdirs()) {
+                throw new IOException("Failed to create directory: " + uploadDir);
+            }
+        }
+
+        // Generate the result filename by combining description and the original file's name
+        String resultFilename = description + "_" + original.getOriginalFilename();
+        // Transfer the file to the upload directory
+        File newFile = new File(uploadDir, resultFilename);
+        original.transferTo(newFile);
+        // Verify if the file transfer was successful
+        if (!newFile.exists() || newFile.length() != original.getSize()) {
+            throw new IOException("Failed to transfer the file to: " + newFile);
+        }
+        // Return the absolute path of the transferred file
+        return newFile.getAbsolutePath();
+
+
     }
+
 
     private void zipFiles(List<File> files, ZipOutputStream zipOutputStream) throws IOException {
         Set<String> fileNameAdded = new HashSet<>();

@@ -1,18 +1,17 @@
 package com.example.transferstylerebuildmaven.services;
 
-import com.example.transferstylerebuildmaven.respones.AuthenticationResponse;
-import com.example.transferstylerebuildmaven.requests.AuthenticationRequest;
-import com.example.transferstylerebuildmaven.requests.RegisterRequest;
 import com.example.transferstylerebuildmaven.models.token.Token;
 import com.example.transferstylerebuildmaven.models.token.TokenType;
 import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.repositories.TokenRepository;
 import com.example.transferstylerebuildmaven.repositories.UserRepository;
+import com.example.transferstylerebuildmaven.requests.AuthenticationRequest;
+import com.example.transferstylerebuildmaven.requests.RegisterRequest;
+import com.example.transferstylerebuildmaven.respones.AuthenticationResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -33,7 +32,7 @@ public class AuthenticationService {
     private final TokenRepository tokenRepository;
     private final EmailSerivce emailSerivce;
 
-    private final boolean shouldSendEmail = true;
+    private final boolean shouldSendEmail = false;
 
     public AuthenticationResponse register(RegisterRequest request) {
         User user = User.builder()

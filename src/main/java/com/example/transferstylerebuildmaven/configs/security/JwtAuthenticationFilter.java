@@ -1,6 +1,9 @@
 package com.example.transferstylerebuildmaven.configs.security;
 
+import com.example.transferstylerebuildmaven.models.token.Token;
+import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.repositories.TokenRepository;
+import com.example.transferstylerebuildmaven.repositories.UserRepository;
 import com.example.transferstylerebuildmaven.services.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -26,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final TokenRepository tokenRepository;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -61,6 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
              */
             //user not authenticated
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+
             boolean isTokenFunctioning =  tokenRepository.findByToken(jwtToken)
                     .map(t-> !t.isExpired() && !t.isRevoked())
                     .orElse(false);
@@ -69,13 +75,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtService.isTokenValid(jwtToken, userDetails) && isTokenFunctioning){
                 // if user valid
                 // creates an authentication token
+
+                Long userId = userRepository.findByUsername(username).orElseThrow().getId(); // assuming
+
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
                         userDetails.getAuthorities()
                 );
-                authenticationToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
+                // authenticationToken.setDetails(
+                //                        new WebAuthenticationDetailsSource().buildDetails(request));
+
+                authenticationToken.setDetails(userId);
 
                 // update auth token
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);

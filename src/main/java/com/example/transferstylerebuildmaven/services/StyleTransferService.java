@@ -8,15 +8,18 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.IOUtils;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.util.UUID;
 
 
 /**
@@ -48,7 +51,7 @@ public class StyleTransferService {
      * @param optimizer       The optimizer for style transfer
      * @return                True if style transfer is successful, false otherwise
      */
-    public boolean doStyleTransferGatys(UUID uuidRequest, MultipartFile originalImage, MultipartFile styleImage, String optimizer) {
+    public boolean doStyleTransferGatys(User creatorOfRequest,UUID uuidRequest, MultipartFile originalImage, MultipartFile styleImage, String optimizer) {
         StyleTransfer createdStyleTransfer = new StyleTransfer();
         createdStyleTransfer.setUuidRequest(uuidRequest);
         createdStyleTransfer.setCreatedAt(LocalDateTime.now());
@@ -85,10 +88,16 @@ public class StyleTransferService {
                 createdStyleTransfer.setCreatedImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToOutputImage).getFile())));
                 createdStyleTransfer.setStyleImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToStyleImage).getFile())));
                 createdStyleTransfer.setOriginalImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToOriginalImage).getFile())));
+
+
+                createdStyleTransfer.setUser(creatorOfRequest);
             } catch (IOException e) {
                 e.printStackTrace();
 //            throw new IOException("Output file with name " + pathToOutputImage + " not found");
             }
+
+
+
             styleTransferRepository.save(createdStyleTransfer);
         }).start();
 
@@ -116,15 +125,10 @@ public class StyleTransferService {
         return styleTransferRepository.findByUuidRequest(uuidRequest).orElse(null);
     }
 
-    public File getResultFilesInByteArrayStream(UUID uuidRequest) throws IOException {
-        return fileService.createZipResultFiles(uuidRequest);
-    }
 
-    public void sendResultInEmail(UUID uuidRequest, String name) throws IOException {
-        User user = userService.getUser(name);
-        emailSerivce.sendEmailWithAttachment(user.getEmail(), "Style Transfer Result", "Your Result", fileService.createZipResultFiles(uuidRequest));
+    public void sendResultInEmail(UUID uuidRequest, String userEmail) throws IOException {
+        emailSerivce.sendEmailWithAttachment(userEmail, "Style Transfer Result", "Your Result", fileService.createZipResultFiles(uuidRequest));
     }
-
 
 
 

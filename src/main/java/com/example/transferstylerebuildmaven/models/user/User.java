@@ -3,11 +3,9 @@ package com.example.transferstylerebuildmaven.models.user;
 
 
 import com.example.transferstylerebuildmaven.models.token.Token;
-import com.example.transferstylerebuildmaven.models.user.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
@@ -17,7 +15,6 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -74,17 +71,15 @@ public class User implements UserDetails {
         lastModifiedDate = registrationDate;
     }
 
-//    public static class UserBuilder{
-//        public User build(){
-//            User user = new User();
-//            user.setEmail(email);
-//            user.setPassword(password);
-//            user.setUsername(username);
-//            user.setFirstName(firstName);
-//            user.setLastName(lastName);
-//            return user;
-//        }
-//    }
+    @Override
+    public String toString(){
+        return "User{" +
+                "username='" + username + '\'' +
+                ", email='" + email + '\'' +
+                ", isDeleted='" + isDeleted + '\'' +
+                ", id=" + id +
+                '}';
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

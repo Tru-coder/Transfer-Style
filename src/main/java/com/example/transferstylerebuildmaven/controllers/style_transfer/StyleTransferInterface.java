@@ -74,24 +74,6 @@ public interface StyleTransferInterface {
     StyleTransferProcessingState getRequestState(@PathVariable("uuidRequest") UUID uuidRequest);
 
 
-    @Operation(
-            description = "Download all result files from disk in zip-file",
-            summary = "zip-file",
-            responses = {
-                    @ApiResponse(
-                            description = "Download result",
-                            responseCode = "200"
-                    ),
-                    @ApiResponse(
-                            description = "Internal Server Error" ,
-                            responseCode = "500"
-                    )
-            }
-    )
-
-    @RequestMapping(value = "/style/transfer/image/gatys/download/disk/{uuidRequest}", method = RequestMethod.GET)
-    ResponseEntity<?> downloadAllResultFilesFromDisk(@PathVariable("uuidRequest") UUID uuidRequest) throws IOException;
-
 
     @Operation(
             description = "Returns a result image from db in jpg",

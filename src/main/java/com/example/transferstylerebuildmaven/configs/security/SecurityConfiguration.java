@@ -28,6 +28,7 @@ import static org.springframework.http.HttpMethod.*;
 @RequiredArgsConstructor
 public class SecurityConfiguration  {
     private static final String[] WHITE_LIST_URL = {
+            "/api/file/**",
             "/api/style/**",
             "/api/v1/auth/**",
             "/v2/api-docs",

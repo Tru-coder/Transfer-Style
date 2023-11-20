@@ -3,44 +3,36 @@ package com.example.transferstylerebuildmaven.controllers.style_transfer;
 
 import com.example.transferstylerebuildmaven.commons.RequestState;
 import com.example.transferstylerebuildmaven.commons.StyleTransferProcessingState;
+import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.respones.style_transfers.RequestStyleTransferResponse;
-import com.example.transferstylerebuildmaven.services.FileSystemStorageService;
 import com.example.transferstylerebuildmaven.services.StyleTransferService;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.io.IOUtils;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.Principal;
-import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api")
 public class StyleTransferController implements StyleTransferInterface {
-    // todo: seperate StyleTransferController in StyleTransferController and FileController
     private final StyleTransferService styleTransferService;
-    private final FileSystemStorageService fileSystemStorageService;
 
     private final HashMap<UUID, StyleTransferProcessingState> requestsState
-            = new HashMap<UUID, StyleTransferProcessingState>();
+            = new HashMap<>();
 
 
     @RequestMapping(value = "auth/result/style/transfer/{uuidRequest}", method = RequestMethod.GET)
-    public ResponseEntity<?> sendResultStyleTransferInEmail (@PathVariable("uuidRequest") UUID uuidRequest, Principal principal) throws IOException {
-        styleTransferService.sendResultInEmail(uuidRequest, principal.getName());
+    public ResponseEntity<?> sendResultStyleTransferInEmail (@PathVariable("uuidRequest") UUID uuidRequest) throws IOException {
+        styleTransferService.sendResultInEmail(uuidRequest, Objects.requireNonNull(getCurrentUser()).getEmail());
         return ResponseEntity.ok().body("Sent");
     }
 
@@ -55,12 +47,13 @@ public class StyleTransferController implements StyleTransferInterface {
         }
 
         UUID uuidRequest = UUID.randomUUID();
+        User currentUser = getCurrentUser();
         new Thread(() -> {
             requestsState.put(uuidRequest,
                     new StyleTransferProcessingState(RequestState.Processing,
                             "Image processing initialized"));
 
-            if ( styleTransferService.doStyleTransferGatys(uuidRequest, originalImage, styleImage, optimizer)){
+            if ( styleTransferService.doStyleTransferGatys(currentUser, uuidRequest, originalImage, styleImage, optimizer)){
                 requestsState.put(uuidRequest,
                         new StyleTransferProcessingState(RequestState.Done,
                                 "Image processing finished"));
@@ -88,31 +81,13 @@ public class StyleTransferController implements StyleTransferInterface {
     }
 
 
-
-    @Override
-    public ResponseEntity<?> downloadAllResultFilesFromDisk(@PathVariable("uuidRequest") UUID uuidRequest) throws IOException {
-
-        File zip = fileSystemStorageService.createZipResultFiles(uuidRequest);
-
-        Path zipPath = zip.toPath();
-        byte[] zipContent = Files.readAllBytes(zipPath);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/zip"));
-        headers.setContentDispositionFormData("attachment", "Result_files.zip");
-        headers.setContentLength(zipContent.length);
-
-        return new ResponseEntity<>(zipContent, headers, HttpStatus.OK);
+    @RequestMapping(value = "/style/transfer/{uuidRequest}")
+    public ResponseEntity<?> getStyleTransfer(@PathVariable("uuidRequest") UUID uuidRequest){
 
 
-//        return ResponseEntity.ok()
-//                .header("Content-Disposition", "attachment; filename= Result_files.zip")
-//                .body(outputStream.toByteArray());
-//        return null;
-
-//           // Create an output stream
-//        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        return ResponseEntity.status(HttpStatus.OK).body( styleTransferService.getStyleTransferByUuidRequest(uuidRequest));
     }
+
 
 
     @Override
@@ -125,5 +100,16 @@ public class StyleTransferController implements StyleTransferInterface {
     public ResponseEntity<?> deleteStyleTransferByUuid(@PathVariable("uuidRequest") UUID uuidRequest){
 
         return ResponseEntity.status(HttpStatus.OK).body(styleTransferService.softDeleteStyleTransfer(uuidRequest));
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails){
+            return (User) authentication.getPrincipal();
+        }
+        else {
+            // Handle the case where the principal is not available or is not of type UserDetails
+            return null;
+        }
     }
 }

@@ -25,7 +25,13 @@ public class DemoController {
 
     @GetMapping("/demo-controller/info")
     public String userData(Principal principal) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        System.out.println(authentication.getName());
+        System.out.println( authentication.getAuthorities());
+        System.out.println(  authentication.getPrincipal());
+        System.out.println(authentication.getCredentials());
+        System.out.println(authentication.getDetails());
 
         return
                 principal.getName();

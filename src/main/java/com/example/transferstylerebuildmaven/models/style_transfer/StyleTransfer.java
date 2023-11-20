@@ -1,14 +1,16 @@
 package com.example.transferstylerebuildmaven.models.style_transfer;
 
+import com.example.transferstylerebuildmaven.models.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.UUID;
 
 @Entity
@@ -64,6 +66,12 @@ public class StyleTransfer {
 
     @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean isDeleted;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JsonIgnore
+    private User user;
 
     @PrePersist
     public void initialize() {
