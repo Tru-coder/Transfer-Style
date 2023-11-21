@@ -1,6 +1,7 @@
 package com.example.transferstylerebuildmaven.models.style_transfer;
 
 import com.example.transferstylerebuildmaven.models.Image.Image;
+import com.example.transferstylerebuildmaven.models.Image.ImageType;
 import com.example.transferstylerebuildmaven.models.user.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -11,7 +12,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -45,25 +46,6 @@ public class StyleTransfer {
     @Enumerated(EnumType.STRING)
     private StyleTransferType algorithmStyleTransferType;
 
-    @Column(nullable = false, name = "style_image_absolute_path")
-    private String styleImageAbsolutePath;
-
-    @Column(nullable = false, name = "original_image_absolute_path")
-    private String originalImageAbsolutePath;
-
-    @Column(nullable = false, name = "created_image_absolute_path")
-    private String createdImageAbsolutePath;
-
-    @Lob
-    @Column(nullable = false, name = "style_image_in_bytes" )
-    private byte[] styleImageInBytes;
-    @Lob
-    @Column(nullable = false, name = "original_image_in_bytes")
-    private byte[] originalImageInBytes;
-    @Lob
-    @Column(nullable = false, name = "created_image_in_bytes")
-    private byte[] createdImageInBytes;
-
     @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean isDeleted;
 
@@ -73,8 +55,9 @@ public class StyleTransfer {
     @JsonIgnore
     private User user;
 
-    @OneToMany(mappedBy = "styleTransfer", cascade = CascadeType.ALL)
-    private List<Image> images;
+    @OneToMany(mappedBy = "styleTransfer", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @MapKey(name = "imageType")
+    private Map<ImageType, Image> images;
 
     @Override
     public String toString(){

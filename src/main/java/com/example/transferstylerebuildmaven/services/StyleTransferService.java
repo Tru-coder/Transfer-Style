@@ -1,8 +1,12 @@
 package com.example.transferstylerebuildmaven.services;
 
+import com.example.transferstylerebuildmaven.models.Image.Image;
+import com.example.transferstylerebuildmaven.models.Image.ImageExtension;
+import com.example.transferstylerebuildmaven.models.Image.ImageType;
 import com.example.transferstylerebuildmaven.models.style_transfer.StyleTransfer;
 import com.example.transferstylerebuildmaven.models.style_transfer.StyleTransferType;
 import com.example.transferstylerebuildmaven.models.user.User;
+import com.example.transferstylerebuildmaven.repositories.ImageRepository;
 import com.example.transferstylerebuildmaven.repositories.StyleTransferRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +18,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,7 +41,7 @@ public class StyleTransferService {
     private final ResourceLoader resourceLoader;
     private final PythonService pythonService;
     private final FileSystemStorageService fileService;
-
+    private final ImageRepository imageRepository;
 
 
 
@@ -55,21 +61,34 @@ public class StyleTransferService {
         createdStyleTransfer.setCreatedAt(LocalDateTime.now());
 
         // make unique names
-        String  pathToOriginalImage, pathToStyleImage;
+        String pathToOriginalImage,  pathToStyleImage;
         try {
-            pathToOriginalImage = fileService.makeUniqueFileNameAndTransfer(originalImage, "original", uuidRequest.toString());
-            pathToStyleImage = fileService.makeUniqueFileNameAndTransfer(styleImage, "style", uuidRequest.toString());
-        } catch (IOException e) {
+            pathToOriginalImage = fileService.isTransferedBefore(originalImage) ?
+                    fileService.getTransferedImagePath(originalImage.getOriginalFilename()) :
+                    fileService.makeUniqueFileNameAndTransfer(originalImage, "original", uuidRequest.toString());
+
+
+            pathToStyleImage = fileService.isTransferedBefore(styleImage) ?
+                    fileService.getTransferedImagePath(styleImage.getOriginalFilename()) :
+                    fileService.makeUniqueFileNameAndTransfer(styleImage, "style", uuidRequest.toString());
+        }
+        catch (FileNotFoundException e){
+            e.printStackTrace();
+            throw  new RuntimeException("Cannot find transfered multipart file");
+        }
+        catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("Files are empty or malicious");
         }
 
-        createdStyleTransfer.setOriginalImageAbsolutePath(pathToOriginalImage);
-        createdStyleTransfer.setStyleImageAbsolutePath(pathToStyleImage);
-        createdStyleTransfer.setOptimizer(optimizer);
+        HashMap<ImageType, String> pathsToImages = new HashMap<>();
+        pathsToImages.put(ImageType.ORIGINAL, pathToOriginalImage);
+        pathsToImages.put(ImageType.STYLE, pathToStyleImage);
+        pathsToImages.put(ImageType.GENERATED, fileService.getOutputImagePath());
+
 
         // do style transfer
-       if (pythonService.executePythonScript(createdStyleTransfer, fileService.getOutputImagePath()) != 0)
+       if (pythonService.executePythonScript(pathsToImages, optimizer, uuidRequest) != 0)
        {
            throw new RuntimeException("Python script execution error");
        }
@@ -79,27 +98,34 @@ public class StyleTransferService {
             createdStyleTransfer.setOptimizer(optimizer);
             createdStyleTransfer.setFinishedAt(LocalDateTime.now());
             createdStyleTransfer.setAlgorithmStyleTransferType(StyleTransferType.GATYS);
-
             String pathToOutputImage = fileService.getOutputImagePath() + File.separator +  uuidRequest + File.separator + optimizer +"-result.jpg";
-            createdStyleTransfer.setCreatedImageAbsolutePath(pathToOutputImage);
+            createdStyleTransfer.setUser(creatorOfRequest);
             try {
-                createdStyleTransfer.setCreatedImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToOutputImage).getFile())));
-                createdStyleTransfer.setStyleImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToStyleImage).getFile())));
-                createdStyleTransfer.setOriginalImageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToOriginalImage).getFile())));
-
-
-                createdStyleTransfer.setUser(creatorOfRequest);
+                HashMap<ImageType, Image> images = new HashMap<>();
+                initializeHashMapImages(images, ImageType.ORIGINAL, createdStyleTransfer, pathToOriginalImage);
+                initializeHashMapImages(images, ImageType.STYLE, createdStyleTransfer, pathToStyleImage);
+                initializeHashMapImages(images, ImageType.GENERATED, createdStyleTransfer, pathToOutputImage);
+                createdStyleTransfer.setImages(images);
             } catch (IOException e) {
                 e.printStackTrace();
 //            throw new IOException("Output file with name " + pathToOutputImage + " not found");
             }
-
-
-
             styleTransferRepository.save(createdStyleTransfer);
         }).start();
 
         return true;
+    }
+
+    private void initializeHashMapImages( HashMap<ImageType, Image> images, ImageType imageType, StyleTransfer createdStyleTransfer, String pathToImage) throws IOException {
+        images.put(imageType, Image.builder()
+                .styleTransfer(createdStyleTransfer)
+                .absolutePath(pathToImage)
+                .imageName(FileSystemStorageService.extractFileNameFromPath(pathToImage))
+                .imageExtension(ImageExtension.JPG)
+                .imageInBytes(IOUtils.toByteArray(new FileInputStream(resourceLoader.getResource("file:" + pathToImage).getFile())))
+                .imageType(imageType)
+                .build());
+
     }
 
     public boolean hardDeleteStyleTransfer(UUID uuidRequest){

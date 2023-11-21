@@ -3,6 +3,7 @@ package com.example.transferstylerebuildmaven.controllers.style_transfer;
 
 import com.example.transferstylerebuildmaven.commons.RequestState;
 import com.example.transferstylerebuildmaven.commons.StyleTransferProcessingState;
+import com.example.transferstylerebuildmaven.models.Image.ImageType;
 import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.respones.style_transfers.RequestStyleTransferResponse;
 import com.example.transferstylerebuildmaven.services.StyleTransferService;
@@ -41,7 +42,7 @@ public class StyleTransferController implements StyleTransferInterface {
 
     @RequestMapping(value = "auth/results/style/transfer", method = RequestMethod.GET)
     public ResponseEntity<?> getAllUserStyleTransfers ()  {
-        return ResponseEntity.ok().body(styleTransferService.getAllUserStyleTransfers(getCurrentUser()));
+        return ResponseEntity.ok().body(styleTransferService.getAllUserStyleTransfers(getCurrentUser()).toString());
     }
 
     @Override
@@ -52,6 +53,9 @@ public class StyleTransferController implements StyleTransferInterface {
         if  (!(optimizer.equals("lbfgs") || optimizer.equals("adam"))){
             return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("Unacceptable value of optimizer");
         }
+
+        System.out.println(originalImage.getOriginalFilename());
+        System.out.println(originalImage.getName());
 
         UUID uuidRequest = UUID.randomUUID();
         User currentUser = getCurrentUser();
@@ -100,7 +104,7 @@ public class StyleTransferController implements StyleTransferInterface {
     @Override
     public ResponseEntity<?> getResultImageByUuid(@PathVariable("uuidRequest") UUID uuidRequest){
 
-        byte[] createdImage = styleTransferService.getStyleTransferByUuidRequest(uuidRequest).getCreatedImageInBytes();
+        byte[] createdImage = styleTransferService.getStyleTransferByUuidRequest(uuidRequest).getImages().get(ImageType.GENERATED).getImageInBytes();
         return ResponseEntity.status(HttpStatus.OK).body(createdImage);
     }
     @Override

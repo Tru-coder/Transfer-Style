@@ -1,6 +1,6 @@
 package com.example.transferstylerebuildmaven.services;
 
-import com.example.transferstylerebuildmaven.models.style_transfer.StyleTransfer;
+import com.example.transferstylerebuildmaven.models.Image.ImageType;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.UUID;
 
 @Service
@@ -22,12 +23,12 @@ public class PythonService {
     @Value("${python.script.style.transfer.venv.path}")
     private String pythonVenvStyleTransferPath;
 
-    public int executePythonScript(StyleTransfer styleTransfer, String outputImagePath){
+    public int executePythonScript(HashMap<ImageType, String> pathToImages, String optimizer, UUID uuidRequest){
         String parametersString =
-                "--content_img_name " + styleTransfer.getOriginalImageAbsolutePath() + " "
-                        + "--style_img_name " + styleTransfer.getStyleImageAbsolutePath() + " "
-                        + "--optimizer " + styleTransfer.getOptimizer() + " "
-                        + "--location_output_folder "  + outputImagePath + File.separator + styleTransfer.getUuidRequest();
+                "--content_img_name " + pathToImages.get(ImageType.ORIGINAL) + " "
+                        + "--style_img_name " + pathToImages.get(ImageType.STYLE) + " "
+                        + "--optimizer " + optimizer + " "
+                        + "--location_output_folder "  + pathToImages.get(ImageType.GENERATED) + File.separator + uuidRequest;
 
         String executionLine = pythonVenvStyleTransferPath + " "  + pythonScriptStyleTransferGatysPath +
                 " " + parametersString;
