@@ -62,6 +62,10 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user")
     private List<Token> tokens;
 
+    @PreUpdate
+    public void updated(){
+        lastModifiedDate = LocalDateTime.now();
+    }
 
     @PrePersist
     public void initialize() {

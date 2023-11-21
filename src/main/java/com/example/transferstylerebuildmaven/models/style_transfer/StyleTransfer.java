@@ -1,16 +1,17 @@
 package com.example.transferstylerebuildmaven.models.style_transfer;
 
+import com.example.transferstylerebuildmaven.models.Image.Image;
 import com.example.transferstylerebuildmaven.models.user.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -71,6 +72,9 @@ public class StyleTransfer {
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JsonIgnore
     private User user;
+
+    @OneToMany(mappedBy = "styleTransfer", cascade = CascadeType.ALL)
+    private List<Image> images;
 
     @Override
     public String toString(){
