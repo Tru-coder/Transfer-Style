@@ -1,7 +1,9 @@
 package com.example.transferstylerebuildmaven.services;
 
+import com.example.transferstylerebuildmaven.exceptions.user.InvalidRegistrationRequestException;
+import com.example.transferstylerebuildmaven.exceptions.user.UsernameAlreadyTakenException;
 import com.example.transferstylerebuildmaven.models.token.Token;
-import com.example.transferstylerebuildmaven.models.token.TokenType;
+import com.example.transferstylerebuildmaven.models.user.Role;
 import com.example.transferstylerebuildmaven.models.user.User;
 import com.example.transferstylerebuildmaven.repositories.TokenRepository;
 import com.example.transferstylerebuildmaven.repositories.UserRepository;
@@ -11,6 +13,8 @@ import com.example.transferstylerebuildmaven.respones.AuthenticationResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -31,18 +36,14 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final TokenRepository tokenRepository;
     private final EmailSerivce emailSerivce;
+    private final Validator validator;
 
     private final boolean shouldSendEmail = false;
 
-    public AuthenticationResponse register(RegisterRequest request) {
-        User user = User.builder()
-                .firstname(request.getFirstname())
-                .lastname(request.getLastname())
-                .email(request.getEmail())
-                .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
-                .build();
+    public AuthenticationResponse register(RegisterRequest request) throws IllegalStateException {
+        validateRegistrationRequest(request);
+
+        User user = createUserFromRequest(request);
         User savedUser = userRepository.save(user);
 
         String accessToken = jwtService.generateAccessToken(user);
@@ -52,7 +53,6 @@ public class AuthenticationService {
         if (shouldSendEmail){
             new Thread(() -> emailSerivce.sendTextEmail(user.getEmail(), "Successful Registration", "We are happy to see you on our portal")).start();
         }
-
 
         return AuthenticationResponse.builder()
                 .accessToken(accessToken)
@@ -115,8 +115,31 @@ public class AuthenticationService {
         }
     }
 
+
+    private void validateRegistrationRequest(RegisterRequest request) {
+        // Validate the registration request using Bean Validation
+        Set<ConstraintViolation<RegisterRequest>> violations = validator.validate(request);
+
+        if (!violations.isEmpty()) {
+            // If there are validation violations, handle them and throw a custom exception
+            StringBuilder errorMessage = new StringBuilder("Registration request validation failed:");
+            for (ConstraintViolation<RegisterRequest> violation : violations) {
+                errorMessage.append(String.format("%n- %s: %s", violation.getPropertyPath(), violation.getMessage()));
+            }
+            throw new InvalidRegistrationRequestException(errorMessage.toString());
+        }
+
+        // Check if the username is already taken
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new UsernameAlreadyTakenException("Username " + request.getUsername() + " is already taken.");
+        }
+
+
+    }
+
+
     private void revokeAllUserTokens(User user){
-        List<Token>  validUserTokens = tokenRepository.findAllValidTokensByUser(user.getId());
+        List<Token> validUserTokens = tokenRepository.findAllValidTokensByUser(user.getId());
         if (validUserTokens.isEmpty()){
             return;
         }
@@ -130,11 +153,21 @@ public class AuthenticationService {
     private void saveUserToken(User user, String accessToken){
         Token token = Token.builder()
                 .user(user)
-                .tokenType(TokenType.BEARER)
                 .expired(false)
                 .revoked(false)
                 .token(accessToken)
                 .build();
         tokenRepository.save(token);
+    }
+
+    private User createUserFromRequest(RegisterRequest request) {
+        return User.builder()
+                .firstname(request.getFirstname())
+                .lastname(request.getLastname())
+                .email(request.getEmail())
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(Role.valueOf(request.getRole()))
+                .build();
     }
 }

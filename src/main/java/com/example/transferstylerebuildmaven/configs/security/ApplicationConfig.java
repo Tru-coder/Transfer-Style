@@ -2,6 +2,8 @@ package com.example.transferstylerebuildmaven.configs.security;
 
 import com.example.transferstylerebuildmaven.auditing.ApplicationAuditAware;
 import com.example.transferstylerebuildmaven.repositories.UserRepository;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,6 +23,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class ApplicationConfig {
     private final UserRepository userRepository;
+
+    @Bean
+    public Validator validator() {
+        return Validation.buildDefaultValidatorFactory().getValidator();
+    }
 
     @Bean
     public UserDetailsService userDetailsService(){

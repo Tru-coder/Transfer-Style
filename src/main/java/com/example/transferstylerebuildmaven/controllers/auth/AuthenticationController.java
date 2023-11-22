@@ -8,6 +8,7 @@ import com.example.transferstylerebuildmaven.services.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,13 +18,16 @@ import org.springframework.web.bind.annotation.*;
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
-    @RequestMapping(value = "/register", method = RequestMethod.POST)
-    public ResponseEntity<AuthenticationResponse> register(
-            @RequestBody RegisterRequest request
-    ){
-
-        return ResponseEntity.ok(authenticationService.register(request));
-    }
+        @RequestMapping(value = "/register", method = RequestMethod.POST)
+        public ResponseEntity<?> register(
+                @RequestBody RegisterRequest request
+        ) {
+            try {
+                return ResponseEntity.ok(authenticationService.register(request));
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("Error occurred: " + e.getMessage());
+            }
+        }
 
     @RequestMapping(value = "/authenticate", method = RequestMethod.POST)
     public ResponseEntity<AuthenticationResponse>  authenticate(
@@ -31,7 +35,8 @@ public class AuthenticationController {
             AuthenticationRequest request
     ){
 
-        return ResponseEntity.ok(authenticationService.authenticate(request));
+            return ResponseEntity.ok(authenticationService.authenticate(request));
+
     }
 
     @RequestMapping(value = "/refresh-token", method = RequestMethod.POST)

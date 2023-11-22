@@ -25,7 +25,7 @@ public class Token {
     private String token;
 
     @Enumerated(EnumType.STRING)
-    public TokenType tokenType = TokenType.BEARER;
+    private final TokenType tokenType = TokenType.BEARER;
 
     private boolean revoked;
 

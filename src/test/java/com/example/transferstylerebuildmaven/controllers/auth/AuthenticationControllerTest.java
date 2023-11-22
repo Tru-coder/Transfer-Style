@@ -56,8 +56,8 @@ public class AuthenticationControllerTest {
                 .firstname("firstname")
                 .lastname("lastname")
                 .email("admin@mail.com")
-                .password("password")
-                .role(ADMIN)
+                .password("Maximus1#")
+                .role("ADMIN")
                 .build();
 
 
